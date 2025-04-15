@@ -444,22 +444,33 @@ with tab1:
                 import re
 
                 def normalize_column(col):
-                    # Remove espaços duplicados, tabs, NBSPs e põe tudo minúsculo
+                    # Remove múltiplos espaços, NBSPs, tabs, etc
                     col = re.sub(r'\s+', ' ', str(col)).replace('\xa0', ' ').strip().lower()
                     return col
                 
+                # Normaliza colunas da planilha
                 df.columns = [normalize_column(c) for c in df.columns]
-
                 
-                # Colunas esperadas (em lowercase)
-                required_for_tab2 = ['witness 1', 'witness 2', 'date:', 'vessel', 'type', 'year', 'abreviation']
+                # Define colunas obrigatórias com nomes "originais"
+                pretty_column_names = {
+                    'witness 1': 'Witness 1',
+                    'witness 2': 'Witness 2',
+                    'date:': 'Date:',
+                    'vessel': 'Vessel',
+                    'type': 'Type',
+                    'year': 'Year',
+                    'abreviation': 'Abreviation'
+                }
                 
-                # Verifica colunas ausentes
+                # Normaliza keys do dicionário
+                required_for_tab2 = list(pretty_column_names.keys())
+                
+                # Detecta colunas faltando
                 missing_tab2 = [col for col in required_for_tab2 if col not in df.columns]
                 
-                # Formata os nomes para exibir corretamente
+                # Mostra nomes bonitos no aviso
                 if missing_tab2:
-                    missing_pretty = [col.title() if ':' not in col else col.capitalize() for col in missing_tab2]
+                    missing_pretty = [pretty_column_names[col] for col in missing_tab2]
                     st.warning(f"Atenção: A planilha está faltando colunas usadas para a aba 'Mesclar PDFs': {', '.join(missing_pretty)}")
 
                 if st.button("Gerar DOCX"):
