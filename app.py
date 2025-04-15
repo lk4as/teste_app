@@ -420,17 +420,16 @@ except Exception as e:
 tab1, tab2 = st.tabs(["Gerar Relatório", "Mesclar PDFs"])
 
 with tab1:
-    st.header("1. Gerar Test Report")
-    excel_file = st.file_uploader("Upload da planilha Excel", type=["xlsx"], key="excel_gen")
-    if excel_file:
-        if st.button("Gerar DOCX"):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-                tmp.write(excel_file.read())
-                tmp_excel = tmp.name
-            docx_path = generate_test_report_docx(tmp_excel)
-            st.success("DOCX gerado!")
-            with open(docx_path, "rb") as f:
-                st.download_button("Baixar DOCX", f, file_name="test_report.docx")
+    if st.button("Gerar DOCX"):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+        tmp.write(excel_file.read())
+        tmp_excel = tmp.name
+    docx_path = generate_test_report_docx(tmp_excel)
+    if docx_path:
+        st.success("DOCX gerado com sucesso!")
+        with open(docx_path, "rb") as f:
+            st.download_button("Baixar DOCX", f, file_name="test_report.docx")
+
        
 
 with tab2:
