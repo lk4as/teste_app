@@ -440,13 +440,19 @@ with tab1:
                 st.error("A planilha não contém nenhuma aba com o nome contendo 'test'. Verifique os nomes das abas.")
             else:
                 df = pd.read_excel(xls, sheet_name=sheet_name)
+               # Padroniza as colunas da planilha
                 df.columns = df.columns.str.strip().str.lower()
-
-                # Validação antecipada para a aba 2
-                required_for_tab2 = ['Witness 1', 'Witness 2', 'Date:', 'Vessel', 'Type', 'Year', 'Abreviation']
+                
+                # Colunas esperadas (em lowercase)
+                required_for_tab2 = ['witness 1', 'witness 2', 'date:', 'vessel', 'type', 'year', 'abreviation']
+                
+                # Verifica colunas ausentes
                 missing_tab2 = [col for col in required_for_tab2 if col not in df.columns]
+                
+                # Formata os nomes para exibir corretamente
                 if missing_tab2:
-                    st.warning(f"Atenção: A planilha está faltando colunas usadas para a aba 'Mesclar PDFs': {', '.join(missing_tab2)}")
+                    missing_pretty = [col.title() if ':' not in col else col.capitalize() for col in missing_tab2]
+                    st.warning(f"Atenção: A planilha está faltando colunas usadas para a aba 'Mesclar PDFs': {', '.join(missing_pretty)}")
 
                 if st.button("Gerar DOCX"):
                     docx_path = generate_test_report_docx(tmp_excel)
