@@ -206,16 +206,23 @@ def generate_test_report_docx(excel_path):
     try:
         # Lê todas as abas
         xls = pd.ExcelFile(excel_path)
-        sheet_name = None
+      sheet_name = None
+aba_opcoes = xls.sheet_names
 
-        # Busca aba que contenha "test" no nome (case-insensitive)
-        for name in xls.sheet_names:
-            if "test" in name.strip().lower():
-                sheet_name = name
-                break
+for name in aba_opcoes:
+    if "test" in name.strip().lower():
+        sheet_name = name
+        break
 
-        if not sheet_name:
-            raise ValueError("A planilha não contém nenhuma aba com o nome contendo 'test'. Verifique os nomes das abas.")
+if not sheet_name:
+    st.error(f"""
+    ❌ Nenhuma aba contendo 'test' foi encontrada.
+
+    ➤ Abas disponíveis na planilha: {', '.join(aba_opcoes)}
+
+    ✔️ Renomeie a aba principal para algo como 'Test', 'Test Report', 'Annual Test', etc.
+    """)
+    st.stop()  # Interrompe a execução dessa aba
 
         # Lê a aba encontrada
         df = pd.read_excel(xls, sheet_name=sheet_name)
