@@ -206,23 +206,23 @@ def generate_test_report_docx(excel_path):
     try:
         # Lê todas as abas
         xls = pd.ExcelFile(excel_path)
-      sheet_name = None
-aba_opcoes = xls.sheet_names
-
-for name in aba_opcoes:
-    if "test" in name.strip().lower():
-        sheet_name = name
-        break
-
-if not sheet_name:
-    st.error(f"""
-    ❌ Nenhuma aba contendo 'test' foi encontrada.
-
-    ➤ Abas disponíveis na planilha: {', '.join(aba_opcoes)}
-
-    ✔️ Renomeie a aba principal para algo como 'Test', 'Test Report', 'Annual Test', etc.
-    """)
-    st.stop()  # Interrompe a execução dessa aba
+        sheet_name = None
+        aba_opcoes = xls.sheet_names
+        
+        for name in aba_opcoes:
+            if "test" in name.strip().lower():
+                sheet_name = name
+                break
+        
+        if not sheet_name:
+            st.error(f"""
+            ❌ Nenhuma aba contendo 'test' foi encontrada.
+        
+            ➤ Abas disponíveis na planilha: {', '.join(aba_opcoes)}
+        
+            ✔️ Renomeie a aba principal para algo como 'Test', 'Test Report', 'Annual Test', etc.
+            """)
+            st.stop()  # Interrompe a execução dessa aba
 
         # Lê a aba encontrada
         df = pd.read_excel(xls, sheet_name=sheet_name)
