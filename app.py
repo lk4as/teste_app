@@ -420,15 +420,41 @@ except Exception as e:
 tab1, tab2 = st.tabs(["Gerar Relatório", "Mesclar PDFs"])
 
 with tab1:
-    if st.button("Gerar DOCX"):
+   if excel_file:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
         tmp.write(excel_file.read())
         tmp_excel = tmp.name
-    docx_path = generate_test_report_docx(tmp_excel)
-    if docx_path:
-        st.success("DOCX gerado com sucesso!")
-        with open(docx_path, "rb") as f:
-            st.download_button("Baixar DOCX", f, file_name="test_report.docx")
+
+    # Verificação antecipada para a aba 2
+    try:
+        xls = pd.ExcelFile(tmp_excel)
+        sheet_name = None
+        for name in xls.sheet_names:
+            if "test" in name.strip().lower():
+                sheet_name = name
+                break
+        if not sheet_name:
+            st.error("A planilha não contém nenhuma aba com o nome contendo 'test'. Verifique os nomes das abas.")
+        else:
+            df = pd.read_excel(xls, sheet_name=sheet_name)
+            df.columns = df.columns.str.strip().str.lower()
+
+            # Validação das colunas exigidas pela aba 2
+            required_for_tab2 = ['witness 1', 'witness 2', 'date:', 'vessel', 'type', 'year', 'abreviation']
+            missing_tab2 = [col for col in required_for_tab2 if col not in df.columns]
+            if missing_tab2:
+                st.warning(f"Atenção: A planilha está faltando colunas usadas para a aba 'Mesclar PDFs': {', '.join(missing_tab2)}")
+            
+            if st.button("Gerar DOCX"):
+                docx_path = generate_test_report_docx(tmp_excel)
+                if docx_path:
+                    st.success("DOCX gerado com sucesso!")
+                    with open(docx_path, "rb") as f:
+                        st.download_button("Baixar DOCX", f, file_name="test_report.docx")
+
+    except Exception as e:
+        st.error("Erro ao processar a planilha. Verifique o conteúdo e tente novamente.")
+        st.exception(e)
 
        
 
