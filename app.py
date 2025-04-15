@@ -437,55 +437,52 @@ with tab1:
 
         try:
             xls = pd.ExcelFile(tmp_excel)
+            aba_opcoes = xls.sheet_names
             sheet_name = None
-            for name in xls.sheet_names:
+            for name in aba_opcoes:
                 if "test" in name.strip().lower():
                     sheet_name = name
                     break
 
             if not sheet_name:
-                st.error("A planilha não contém nenhuma aba com o nome contendo 'test'. Verifique os nomes das abas.")
-            else:
-                df = pd.read_excel(xls, sheet_name=sheet_name)
-               # Padroniza as colunas da planilha
-                import re
+                st.error(f"""
+❌ Nenhuma aba contendo 'test' foi encontrada.
+➤ Abas disponíveis na planilha: {', '.join(aba_opcoes)}
+✔️ Renomeie a aba principal para algo como 'Test', 'Test Report', 'Annual Test', etc.
+""")
+                st.stop()  # Interrompe a execução
 
-                def normalize_column(col):
-                    # Remove múltiplos espaços, NBSPs, tabs, etc
-                    col = re.sub(r'\s+', ' ', str(col)).replace('\xa0', ' ').strip().lower()
-                    return col
-                
-                # Normaliza colunas da planilha
-                df.columns = [normalize_column(c) for c in df.columns]
-                
-                # Define colunas obrigatórias com nomes "originais"
-                pretty_column_names = {
-                    'witness 1': 'Witness 1',
-                    'witness 2': 'Witness 2',
-                    'date:': 'Date:',
-                    'vessel': 'Vessel',
-                    'type': 'Type',
-                    'year': 'Year',
-                    'abreviation': 'Abreviation'
-                }
-                
-                # Normaliza keys do dicionário
-                required_for_tab2 = list(pretty_column_names.keys())
-                
-                # Detecta colunas faltando
-                missing_tab2 = [col for col in required_for_tab2 if col not in df.columns]
-                
-                # Mostra nomes bonitos no aviso
-                if missing_tab2:
-                    missing_pretty = [pretty_column_names[col] for col in missing_tab2]
-                    st.warning(f"Atenção: A planilha está faltando colunas usadas para a aba 'Mesclar PDFs': {', '.join(missing_pretty)}")
+            df = pd.read_excel(xls, sheet_name=sheet_name)
+            
+            # Função para normalizar os nomes das colunas
+            import re
+            def normalize_column(col):
+                return re.sub(r'\s+', ' ', str(col)).replace('\xa0', ' ').strip().lower()
+            
+            # Normaliza as colunas da planilha
+            df.columns = [normalize_column(c) for c in df.columns]
 
-                if st.button("Gerar DOCX"):
-                    docx_path = generate_test_report_docx(tmp_excel)
-                    if docx_path:
-                        st.success("DOCX gerado com sucesso!")
-                        with open(docx_path, "rb") as f:
-                            st.download_button("Baixar DOCX", f, file_name="test_report.docx")
+            # Define as colunas obrigatórias com nomes bonitos para exibição
+            required_for_tab2 = {
+                'witness 1': 'Witness 1',
+                'witness 2': 'Witness 2',
+                'date:': 'Date:',
+                'vessel': 'Vessel',
+                'type': 'Type',
+                'year': 'Year',
+                'abreviation': 'Abreviation'
+            }
+            missing_tab2 = [col for col in required_for_tab2 if col not in df.columns]
+            if missing_tab2:
+                missing_pretty = [required_for_tab2[col] for col in missing_tab2]
+                st.warning(f"Atenção: A planilha está faltando colunas usadas para a aba 'Mesclar PDFs': {', '.join(missing_pretty)}")
+
+            if st.button("Gerar DOCX"):
+                docx_path = generate_test_report_docx(tmp_excel)
+                if docx_path:
+                    st.success("DOCX gerado com sucesso!")
+                    with open(docx_path, "rb") as f:
+                        st.download_button("Baixar DOCX", f, file_name="test_report.docx")
 
         except Exception as e:
             st.error("Erro ao processar a planilha. Verifique o conteúdo e tente novamente.")
