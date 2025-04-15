@@ -441,7 +441,15 @@ with tab1:
             else:
                 df = pd.read_excel(xls, sheet_name=sheet_name)
                # Padroniza as colunas da planilha
-                df.columns = df.columns.str.strip().str.lower()
+                import re
+
+                def normalize_column(col):
+                    # Remove espaços duplicados, tabs, NBSPs e põe tudo minúsculo
+                    col = re.sub(r'\s+', ' ', str(col)).replace('\xa0', ' ').strip().lower()
+                    return col
+                
+                df.columns = [normalize_column(c) for c in df.columns]
+
                 
                 # Colunas esperadas (em lowercase)
                 required_for_tab2 = ['witness 1', 'witness 2', 'date:', 'vessel', 'type', 'year', 'abreviation']
