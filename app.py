@@ -443,7 +443,7 @@ with tab1:
                 df.columns = df.columns.str.strip().str.lower()
 
                 # Validação antecipada para a aba 2
-                required_for_tab2 = ['witness 1', 'witness 2', 'date:', 'vessel', 'type', 'year', 'abreviation']
+                required_for_tab2 = ['Witness 1', 'Witness 2', 'Date:', 'Vessel', 'Type', 'Year', 'Abreviation']
                 missing_tab2 = [col for col in required_for_tab2 if col not in df.columns]
                 if missing_tab2:
                     st.warning(f"Atenção: A planilha está faltando colunas usadas para a aba 'Mesclar PDFs': {', '.join(missing_tab2)}")
