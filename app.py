@@ -45,11 +45,11 @@ def create_chapter_cover(doc, chapter_title):
     # Se já houver conteúdo, força um salto de página
     if len(doc.paragraphs) > 0:
         doc.add_page_break()
-    # Adiciona 20 parágrafos vazios para o espaçamento superior
+    # Espaçamento superior
     for _ in range(20):
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = 1
-    # Cria o parágrafo do título centralizado
+    # Título centralizado
     para = doc.add_paragraph()
     para.paragraph_format.line_spacing = 1
     run = para.add_run(chapter_title)
@@ -57,7 +57,7 @@ def create_chapter_cover(doc, chapter_title):
     run.font.underline = True
     run.bold = True
     para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-    # Adiciona 7 parágrafos vazios para espaçamento inferior
+    # Espaçamento inferior
     for _ in range(7):
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = 1
@@ -67,14 +67,14 @@ def create_bordered_section(doc, label, content, no_bottom_border=False, extra_s
     table = doc.add_table(rows=1, cols=1)
     cell = table.cell(0, 0)
     cell.text = ''
-    # Parágrafo do título
+    # Título do campo
     p_title = cell.add_paragraph()
     p_title.paragraph_format.space_before = extra_space_top
     p_title.paragraph_format.space_after = Pt(0)
     run_title = p_title.add_run(f"{label}:")
     run_title.bold = True
     run_title.font.size = Pt(12)
-    # Parágrafo do conteúdo com espaçamento configurado
+    # Conteúdo do campo
     p_content = cell.add_paragraph()
     p_content.paragraph_format.space_before = Pt(0)
     p_content.paragraph_format.space_after = extra_space_after_content
@@ -89,7 +89,7 @@ def create_bordered_section(doc, label, content, no_bottom_border=False, extra_s
     set_cell_border(cell, **cell_border_settings)
 
 def create_test_page(doc, test_info):
-    # Inicia nova seção para cada página de teste
+    # Inicia nova seção para cada teste
     doc.add_section(WD_SECTION_START.NEW_PAGE)
     # Título do teste
     para_title = doc.add_paragraph()
@@ -202,23 +202,22 @@ def create_test_page(doc, test_info):
         for cell in row.cells:
             set_cell_border(cell, **default_border_settings)
 
-def generate_test_report_docx(excel_path):
-    # Lê todas as abas do arquivo Excel
-    xls = pd.ExcelFile(excel_path)
-    sheet_name = None
+# Função auxiliar para buscar a aba que contenha "test"
+def get_test_sheet_name(xls):
     for name in xls.sheet_names:
         if "test" in name.strip().lower():
-            sheet_name = name
-            break
+            return name
+    raise ValueError("Planilha não possui uma aba com o nome 'TEST'. Verifique os nomes das abas.")
 
-    # Caso não encontre a aba 'test', lança um erro amigável
-    if not sheet_name:
-        raise ValueError("Planilha não possui aba com nome contendo 'test'. Verifique os nomes das abas.")
-
-    # Lê a aba encontrada
+def generate_test_report_docx(excel_path):
+    # Abre o arquivo Excel e busca a aba "TEST"
+    xls = pd.ExcelFile(excel_path)
+    try:
+        sheet_name = get_test_sheet_name(xls)
+    except ValueError as e:
+        st.error(str(e))
+        st.stop()
     df = pd.read_excel(xls, sheet_name=sheet_name, header=0)
-    
-    # (Continua o processamento normal...)
     grouped_tests = {}
     for _, row in df.iterrows():
         chapter_title = row['Section']
@@ -240,9 +239,7 @@ def generate_test_report_docx(excel_path):
         grouped_tests[test_number]['Steps'].append(row['Step'])
         grouped_tests[test_number]['Expected Results'].append(row['Expected Result'])
         grouped_tests[test_number]['Result + Comment'].append(row['Result + Comment'])
-    
     doc = Document()
-    # Configuração do estilo "Normal" – igual à versão usada no Colab
     styles = doc.styles
     normal_style = styles['Normal']
     normal_style.font.name = 'Raleway'
@@ -250,7 +247,6 @@ def generate_test_report_docx(excel_path):
     normal_paragraph_format.space_before = Pt(0)
     normal_paragraph_format.space_after = Pt(0)
     normal_paragraph_format.line_spacing = 1
-    # Ajusta margens das seções
     for section in doc.sections:
         section.top_margin = Inches(1)
         section.bottom_margin = Inches(1)
@@ -265,7 +261,6 @@ def generate_test_report_docx(excel_path):
     output_docx = os.path.join(tempfile.gettempdir(), "test_report.docx")
     doc.save(output_docx)
     return output_docx
-
 
 def convert_docx_to_pdf(docx_path):
     pdf_path = docx_path.replace(".docx", ".pdf")
@@ -283,7 +278,13 @@ from reportlab.pdfbase.ttfonts import TTFont
 pdfmetrics.registerFont(TTFont('Raleway', 'Raleway-Regular.ttf'))
 
 def read_pdf_overlay_params(excel_path):
-    df = pd.read_excel(excel_path, sheet_name=1)
+    xls = pd.ExcelFile(excel_path)
+    try:
+        sheet_name = get_test_sheet_name(xls)
+    except ValueError as e:
+        st.error(str(e))
+        st.stop()
+    df = pd.read_excel(xls, sheet_name=sheet_name)
     nome_barco = df.loc[0, "Vessel"]
     tipo_teste = df.loc[0, "Type"]
     mes_ano = df.loc[0, "Year"]
@@ -360,84 +361,31 @@ def run_pdf_merge(doc1_path, doc2_path, excel_path):
 
 st.title("Sistema de Geração de Reports para DP Trials")
 
-# -------------------------------
-# EXEMPLO: ADICIONANDO UMA IMAGEM NA INTERFACE
-# -------------------------------
-# Para exibir uma imagem, você precisa saber o caminho (path) onde ela está salva.
-# Em um Mac, o caminho completo geralmente segue o padrão:
-#   /Users/seu_usuario/caminho/para/imagem.png
-#
-# Dicas para obter o caminho da imagem no Mac:
-# 1. Abra o Finder e localize a imagem.
-# 2. Clique com o botão direito na imagem e escolha "Obter Informações".
-# 3. Na janela de informações, procure por "Onde:" que mostrará o caminho para a pasta.
-# 4. Combine esse caminho com o nome do arquivo para formar o caminho completo.
-#
-# Exemplo: Se seu usuário for "joao" e a imagem estiver na pasta Downloads com o nome "minha_imagem.png",
-# o caminho seria: "/Users/joao/Downloads/minha_imagem.png"
-#
-# Altere o valor de 'caminho_imagem' para o caminho correto da sua imagem.
+# Exibe imagem de logo
 caminho_imagem = "Logo tradicional.png"
-
 try:
     imagem = Image.open(caminho_imagem)
-    # Utilizando colunas para centralizar a imagem (opcional)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image(imagem, caption="", use_container_width=True)
 except Exception as e:
     st.error(f"Erro ao carregar a imagem. Verifique o caminho. Detalhes: {e}")
 
-# -------------------------------
 # Abas do aplicativo
-# -------------------------------
 tab1, tab2 = st.tabs(["Gerar Relatório", "Mesclar PDFs"])
 
 with tab1:
     st.header("1. Gerar Test Report")
     excel_file = st.file_uploader("Upload da planilha Excel", type=["xlsx"], key="excel_gen")
     if excel_file:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            tmp.write(excel_file.read())
-            tmp_excel = tmp.name
-
-        try:
-            # Lê todas as abas do Excel
-            xls = pd.ExcelFile(tmp_excel)
-            sheet_name = None
-            for name in xls.sheet_names:
-                if "test" in name.strip().lower():
-                    sheet_name = name
-                    break
-
-            # Mensagem simples se não encontrar a aba com "test"
-            if not sheet_name:
-                st.error("Planilha não possui aba 'TEST'. Verifique os nomes das abas.")
-                st.stop()
-
-            # Lê a aba encontrada
-            df = pd.read_excel(xls, sheet_name=sheet_name, header=0)
-            # Normaliza os nomes das colunas para comparação
-            df.columns = df.columns.str.strip().str.lower()
-
-            # Colunas necessárias (em minúsculas)
-            required_for_tab2 = ['witness 1', 'witness 2', 'date:', 'vessel', 'type', 'year', 'abreviation']
-            missing = [col for col in required_for_tab2 if col not in df.columns]
-            if missing:
-                st.error("Verifique os dados da planilha. Alguma(s) coluna(s) necessária(s) está(ão) faltando ou com problemas.")
-                st.stop()
-
-            if st.button("Gerar DOCX"):
-                docx_path = generate_test_report_docx(tmp_excel)
-                if docx_path:
-                    st.success("DOCX gerado com sucesso!")
-                    with open(docx_path, "rb") as f:
-                        st.download_button("Baixar DOCX", f, file_name="test_report.docx")
-
-        except Exception as e:
-            st.error("Erro ao processar a planilha. Verifique os dados.")
-
-       
+        if st.button("Gerar DOCX"):
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+                tmp.write(excel_file.read())
+                tmp_excel = tmp.name
+            docx_path = generate_test_report_docx(tmp_excel)
+            st.success("DOCX gerado!")
+            with open(docx_path, "rb") as f:
+                st.download_button("Baixar DOCX", f, file_name="test_report.docx")
 
 with tab2:
     st.header("2. Mesclar PDFs")
@@ -459,4 +407,3 @@ with tab2:
             st.success("PDF final mesclado!")
             with open(final_pdf, "rb") as f:
                 st.download_button("Baixar PDF Final", f, file_name="final_report.pdf")
-
