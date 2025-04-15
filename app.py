@@ -380,14 +380,46 @@ with tab1:
     st.header("1. Gerar Test Report")
     excel_file = st.file_uploader("Upload da planilha Excel", type=["xlsx"], key="excel_gen")
     if excel_file:
-        if st.button("Gerar DOCX"):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-                tmp.write(excel_file.read())
-                tmp_excel = tmp.name
-            docx_path = generate_test_report_docx(tmp_excel)
-            st.success("DOCX gerado!")
-            with open(docx_path, "rb") as f:
-                st.download_button("Baixar DOCX", f, file_name="test_report.docx")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+            tmp.write(excel_file.read())
+            tmp_excel = tmp.name
+
+        try:
+            # Lê todas as abas do Excel
+            xls = pd.ExcelFile(tmp_excel)
+            sheet_name = None
+            for name in xls.sheet_names:
+                if "test" in name.strip().lower():
+                    sheet_name = name
+                    break
+
+            # Mensagem simples se não encontrar a aba com "test"
+            if not sheet_name:
+                st.error("Planilha não possui aba 'TEST'. Verifique os nomes das abas.")
+                st.stop()
+
+            # Lê a aba encontrada
+            df = pd.read_excel(xls, sheet_name=sheet_name, header=0)
+            # Normaliza os nomes das colunas para comparação
+            df.columns = df.columns.str.strip().str.lower()
+
+            # Colunas necessárias (em minúsculas)
+            required_for_tab2 = ['witness 1', 'witness 2', 'date:', 'vessel', 'type', 'year', 'abreviation']
+            missing = [col for col in required_for_tab2 if col not in df.columns]
+            if missing:
+                st.error("Verifique os dados da planilha. Alguma(s) coluna(s) necessária(s) está(ão) faltando ou com problemas.")
+                st.stop()
+
+            if st.button("Gerar DOCX"):
+                docx_path = generate_test_report_docx(tmp_excel)
+                if docx_path:
+                    st.success("DOCX gerado com sucesso!")
+                    with open(docx_path, "rb") as f:
+                        st.download_button("Baixar DOCX", f, file_name="test_report.docx")
+
+        except Exception as e:
+            st.error("Erro ao processar a planilha. Verifique os dados.")
+
        
 
 with tab2:
