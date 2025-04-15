@@ -203,7 +203,22 @@ def create_test_page(doc, test_info):
             set_cell_border(cell, **default_border_settings)
 
 def generate_test_report_docx(excel_path):
-    df = pd.read_excel(excel_path, sheet_name=1, header=0)
+    # Lê todas as abas do arquivo Excel
+    xls = pd.ExcelFile(excel_path)
+    sheet_name = None
+    for name in xls.sheet_names:
+        if "test" in name.strip().lower():
+            sheet_name = name
+            break
+
+    # Caso não encontre a aba 'test', lança um erro amigável
+    if not sheet_name:
+        raise ValueError("Planilha não possui aba com nome contendo 'test'. Verifique os nomes das abas.")
+
+    # Lê a aba encontrada
+    df = pd.read_excel(xls, sheet_name=sheet_name, header=0)
+    
+    # (Continua o processamento normal...)
     grouped_tests = {}
     for _, row in df.iterrows():
         chapter_title = row['Section']
@@ -225,6 +240,7 @@ def generate_test_report_docx(excel_path):
         grouped_tests[test_number]['Steps'].append(row['Step'])
         grouped_tests[test_number]['Expected Results'].append(row['Expected Result'])
         grouped_tests[test_number]['Result + Comment'].append(row['Result + Comment'])
+    
     doc = Document()
     # Configuração do estilo "Normal" – igual à versão usada no Colab
     styles = doc.styles
@@ -249,6 +265,7 @@ def generate_test_report_docx(excel_path):
     output_docx = os.path.join(tempfile.gettempdir(), "test_report.docx")
     doc.save(output_docx)
     return output_docx
+
 
 def convert_docx_to_pdf(docx_path):
     pdf_path = docx_path.replace(".docx", ".pdf")
