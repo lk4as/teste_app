@@ -203,52 +203,95 @@ def create_test_page(doc, test_info):
             set_cell_border(cell, **default_border_settings)
 
 def generate_test_report_docx(excel_path):
-    df = pd.read_excel(excel_path, sheet_name=1, header=0)
-    grouped_tests = {}
-    for _, row in df.iterrows():
-        chapter_title = row['Section']
-        test_number = row['test number']
-        if test_number not in grouped_tests:
-            grouped_tests[test_number] = {
-                'Test': row['Test'],
-                'Method': row['Method'],
-                'Steps': [],
-                'Expected Results': [],
-                'Result + Comment': [],
-                'Max. Position Deviation (meters)': row['Max. Position Deviation (meters)'],
-                'Max. Heading Deviation (degrees)': row['Max. Heading Deviation (degrees)'],
-                'Witness 1': row['Witness 1'],
-                'Witness 2': row['Witness 2'],
-                'Date:': row['Date:'],
-                'Section': chapter_title
-            }
-        grouped_tests[test_number]['Steps'].append(row['Step'])
-        grouped_tests[test_number]['Expected Results'].append(row['Expected Result'])
-        grouped_tests[test_number]['Result + Comment'].append(row['Result + Comment'])
-    doc = Document()
-    # Configuração do estilo "Normal" – igual à versão usada no Colab
-    styles = doc.styles
-    normal_style = styles['Normal']
-    normal_style.font.name = 'Raleway'
-    normal_paragraph_format = normal_style.paragraph_format
-    normal_paragraph_format.space_before = Pt(0)
-    normal_paragraph_format.space_after = Pt(0)
-    normal_paragraph_format.line_spacing = 1
-    # Ajusta margens das seções
-    for section in doc.sections:
-        section.top_margin = Inches(1)
-        section.bottom_margin = Inches(1)
-        section.left_margin = Inches(0.2)
-        section.right_margin = Inches(0.2)
-    current_chapter = None
-    for test_info in grouped_tests.values():
-        if current_chapter != test_info['Section']:
-            create_chapter_cover(doc, test_info['Section'])
-            current_chapter = test_info['Section']
-        create_test_page(doc, test_info)
-    output_docx = os.path.join(tempfile.gettempdir(), "test_report.docx")
-    doc.save(output_docx)
-    return output_docx
+    try:
+        # Lê todas as abas
+        xls = pd.ExcelFile(excel_path)
+        sheet_name = None
+
+        # Busca aba que contenha "test" no nome (case-insensitive)
+        for name in xls.sheet_names:
+            if "test" in name.strip().lower():
+                sheet_name = name
+                break
+
+        if not sheet_name:
+            raise ValueError("A planilha não contém nenhuma aba com o nome contendo 'test'. Verifique os nomes das abas.")
+
+        # Lê a aba encontrada
+        df = pd.read_excel(xls, sheet_name=sheet_name)
+
+        # Padroniza nomes de colunas
+        df.columns = df.columns.str.strip().str.lower()
+
+        # Lista de colunas obrigatórias
+        required_columns = [
+            'section', 'test number', 'test', 'method', 'step',
+            'expected result', 'result + comment', 'max. position deviation (meters)',
+            'max. heading deviation (degrees)', 'witness 1', 'witness 2', 'date:'
+        ]
+
+        # Checa colunas ausentes
+        missing = [col for col in required_columns if col not in df.columns]
+        if missing:
+            col_names = ", ".join([f"'{col}'" for col in missing])
+            raise ValueError(f"A planilha está faltando as seguintes colunas obrigatórias: {col_names}")
+
+        # Processa os testes
+        grouped_tests = {}
+        for _, row in df.iterrows():
+            chapter_title = row['section']
+            test_number = row['test number']
+            if test_number not in grouped_tests:
+                grouped_tests[test_number] = {
+                    'Test': row['test'],
+                    'Method': row['method'],
+                    'Steps': [],
+                    'Expected Results': [],
+                    'Result + Comment': [],
+                    'Max. Position Deviation (meters)': row['max. position deviation (meters)'],
+                    'Max. Heading Deviation (degrees)': row['max. heading deviation (degrees)'],
+                    'Witness 1': row['witness 1'],
+                    'Witness 2': row['witness 2'],
+                    'Date:': row['date:'],
+                    'Section': chapter_title
+                }
+            grouped_tests[test_number]['Steps'].append(row['step'])
+            grouped_tests[test_number]['Expected Results'].append(row['expected result'])
+            grouped_tests[test_number]['Result + Comment'].append(row['result + comment'])
+
+        # Criação do documento
+        doc = Document()
+        styles = doc.styles
+        normal_style = styles['Normal']
+        normal_style.font.name = 'Raleway'
+        normal_style.paragraph_format.space_before = Pt(0)
+        normal_style.paragraph_format.space_after = Pt(0)
+        normal_style.paragraph_format.line_spacing = 1
+
+        for section in doc.sections:
+            section.top_margin = Inches(1)
+            section.bottom_margin = Inches(1)
+            section.left_margin = Inches(0.2)
+            section.right_margin = Inches(0.2)
+
+        current_chapter = None
+        for test_info in grouped_tests.values():
+            if current_chapter != test_info['Section']:
+                create_chapter_cover(doc, test_info['Section'])
+                current_chapter = test_info['Section']
+            create_test_page(doc, test_info)
+
+        output_docx = os.path.join(tempfile.gettempdir(), "test_report.docx")
+        doc.save(output_docx)
+        return output_docx
+
+    except ValueError as ve:
+        st.error(str(ve))  # Mensagem amigável ao usuário
+    except Exception as e:
+        st.error("Erro ao processar o arquivo. Verifique o formato e os dados da planilha.")
+        st.exception(e)  # Para debugging (remova em produção)
+        return None
+
 
 def convert_docx_to_pdf(docx_path):
     pdf_path = docx_path.replace(".docx", ".pdf")
